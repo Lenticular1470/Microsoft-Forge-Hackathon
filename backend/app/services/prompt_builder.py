@@ -1,0 +1,271 @@
+"""
+Prompt Builder Service Module.
+
+Constructs structured prompts for Large Language Models.
+Per Prompt Engineering Specification (docs/08-Prompt-Engineering.md) & Phase 7 Optimization:
+- Token-optimized prompts: concise instructions, dense context, zero fluff.
+- Centralizes System Prompt, Review Prompt, and Rewrite Prompt templates.
+- Performs variable substitution ({{language}}, {{review_focus}}, {{code}}).
+- Ensures deterministic prompt construction.
+"""
+
+from typing import Optional
+from app.config.settings import settings
+from app.schemas.requests import ExecutionData
+
+
+class PromptBuilder:
+    """
+    Constructs token-optimized system and user prompts for AI operations.
+    Supports Version 2 Runtime-Aware Reviews per docs/08-Prompt-Engineering.md.
+    """
+
+    # System prompt for generic operations (rewrite)
+    SYSTEM_PROMPT = (
+        "You are a senior software engineer specializing in software architecture, "
+        "code quality, performance, security, and best practices.\n"
+        "Review and rewrite source code while preserving intended functionality.\n"
+        "Adhere to output formats strictly. Do not fabricate requirements or add fluff."
+    )
+
+    # System prompt specifically for structured code review (JSON output)
+    REVIEW_SYSTEM_PROMPT = (
+        "You are an expert code reviewer with deep knowledge of software security, "
+        "performance, and best practices.\n"
+        "Analyze source code and respond with a single, valid JSON object ONLY.\n"
+        "Do NOT include any text outside the JSON object.\n"
+        "Do NOT wrap the JSON in markdown code fences (``` or ```json).\n"
+        "Do NOT add introductory sentences, explanations, or trailing commentary.\n"
+        "Your entire response must be parseable by json.loads() with no preprocessing.\n\n"
+        "The source code below is already line-numbered.\n"
+        "Every line begins with: <line_number> | \n"
+        "Use ONLY these provided line numbers.\n"
+        "Never recount lines.\n"
+        "Never estimate line numbers.\n"
+        "Never ignore blank lines.\n"
+        "Return the exact line numbers shown in the source.\n"
+        "If an issue spans multiple lines, return the first numbered line and the last numbered line.\n"
+        "If you cannot determine the exact location confidently, return null instead of guessing."
+    )
+
+    QUICK_FIX_SYSTEM_PROMPT = (
+        "You are an expert software engineer whose only responsibility is to safely fix ONE selected issue.\n"
+        "Analyze the provided source code and the selected issue, then return a valid JSON object ONLY.\n"
+        "Do NOT include any text outside the JSON object.\n"
+        "Do NOT wrap the JSON in markdown code fences (``` or ```json).\n"
+        "Your entire response must be parseable by json.loads() with no preprocessing."
+    )
+
+    REVIEW_PROMPT_TEMPLATE = (
+        "Task: Review the following {{language}} source code and execution context.\n\n"
+        "Programming Language:\n{{language}}\n\n"
+        "Execution Status:\n{{execution_status}}\n\n"
+        "Execution Success:\n{{execution_success}}\n\n"
+        "Exit Code:\n{{exit_code}}\n\n"
+        "Standard Output:\n{{stdout}}\n\n"
+        "Compiler Errors:\n{{compiler_errors}}\n\n"
+        "Runtime Errors:\n{{runtime_errors}}\n\n"
+        "Standard Error:\n{{stderr}}\n\n"
+        "Review Focus:\n{{review_focus}}\n\n"
+        "Instructions:\n"
+        "- Use runtime execution information whenever available during code review.\n"
+        "- Runtime evidence takes precedence over static assumptions.\n"
+        "- Distinguish between compile-time errors and runtime errors.\n"
+        "- Correlate stack traces in standard error with source code locations and functions.\n"
+        "- If execution data is unavailable (e.g. status is not_executed or execution results are absent), perform normal static analysis.\n\n"
+        "Analyze for: # Summary, # Strengths, # Issues, # Recommendations, correctness, security vulnerabilities, performance, and best practices.\n\n"
+        "Respond with ONLY a valid JSON object matching this exact schema:\n"
+        "{\n"
+        '  "summary": "<overall assessment string>",\n'
+        '  "strengths": ["<strength 1>", "<strength 2>"],\n'
+        '  "recommendations": ["<recommendation 1>", "<recommendation 2>"],\n'
+        '  "markdown": "<full review as markdown text>",\n'
+        '  "issues": [\n'
+        "    {\n"
+        '      "id": 1,\n'
+        '      "severity": "<critical|high|medium|low>",\n'
+        '      "category": "<e.g. Security|Performance|Readability|Bug>",\n'
+        '      "confidence": <float 0.0-1.0>,\n'
+        '      "title": "<short issue title>",\n'
+        '      "description": "<detailed explanation>",\n'
+        '      "line": <1-based integer or null>,\n'
+        '      "column": <1-based integer or null>,\n'
+        '      "endLine": <1-based integer or null>,\n'
+        '      "endColumn": <1-based integer or null>,\n'
+        '      "suggestion": "<how to fix it>",\n'
+        '      "fixSnippet": "<concrete replacement code or null>",\n'
+        '      "fixType": "<replace|insert|delete|refactor or null>"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n\n"
+        "Rules:\n"
+        "- severity must be exactly one of: critical, high, medium, low\n"
+        "- Prefer returning ranges (line/endLine) instead of a single line.\n"
+        "- Do not guess columns. If unknown: column = null, endColumn = null. Only return columns when reasonably confident.\n"
+        "- confidence: your certainty this is a real issue (0.0-1.0)\n"
+        "- fixSnippet: provide a concrete code snippet when possible, otherwise null\n"
+        "- markdown: write a complete human-readable review in Markdown format "
+        "  (will be used for backward compatibility)\n"
+        "- Do NOT fabricate issues that do not exist\n"
+        "- Do NOT include any text outside the JSON object\n\n"
+        "The source code below is already line-numbered.\n"
+        "Every line begins with: <line_number> | \n"
+        "Use ONLY these provided line numbers.\n"
+        "Code ({{language}}):\n```{{language}}\n{{code}}\n```"
+    )
+
+    REWRITE_PROMPT_TEMPLATE = (
+        "Task: Rewrite {{language}} source code.\n\n"
+        "Rules:\n"
+        "- Preserve behavior and business logic.\n"
+        "- Improve readability, structure, and variable naming.\n"
+        "- Apply {{language}} best practices.\n\n"
+        "Output Format:\n"
+        "- Return ONLY rewritten source code.\n"
+        "- Do NOT include Markdown fences, commentary, or extra explanations.\n\n"
+        "Code:\n```{{language}}\n{{code}}\n```"
+    )
+
+    QUICK_FIX_PROMPT_TEMPLATE = (
+        "Task: Fix the selected issue in the following {{language}} source code.\n\n"
+        "Issue Details:\n"
+        "- Title: {{issue_title}}\n"
+        "- Description: {{issue_description}}\n"
+        "- Severity: {{issue_severity}}\n"
+        "- Suggestion: {{issue_suggestion}}\n"
+        "- Fix Snippet: {{issue_fixSnippet}}\n"
+        "- Fix Type: {{issue_fixType}}\n"
+        "- Target Line: {{issue_line}}\n"
+        "- Target End Line: {{issue_endLine}}\n\n"
+        "Rules:\n"
+        "- Fix ONLY the selected issue.\n"
+        "- Do NOT rewrite unrelated code.\n"
+        "- Do NOT optimize, refactor, or modernize syntax outside the issue.\n"
+        "- Do NOT improve readability, rename variables/methods, or reorder imports/methods.\n"
+        "- Preserve formatting, comments, indentation, naming, coding style, and project structure.\n"
+        "- Preserve line numbers and blank lines whenever possible.\n"
+        "- Avoid moving code.\n"
+        "- Choose the smallest safe modification.\n"
+        "- If the issue cannot be fixed safely without changing unrelated code, return the original code and explain why in the 'explanation' field.\n\n"
+        "Respond with ONLY a valid JSON object matching this exact schema:\n"
+        "{\n"
+        '  "fixedCode": "<the completely patched source code>",\n'
+        '  "explanation": "<what changed and why>",\n'
+        '  "changedLines": [\n'
+        "    {\n"
+        '      "line": <number>,\n'
+        '      "endLine": <number or null>,\n'
+        '      "old": "<original code content>",\n'
+        '      "new": "<new replaced code content>"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n\n"
+        "Code ({{language}}):\n```{{language}}\n{{code}}\n```"
+    )
+
+    @classmethod
+    def get_system_prompt(cls) -> str:
+        """Returns the centralized system prompt (used by rewrite)."""
+        return cls.SYSTEM_PROMPT
+
+    @classmethod
+    def get_review_system_prompt(cls) -> str:
+        """Returns the review-specific system prompt (strict JSON output)."""
+        return cls.REVIEW_SYSTEM_PROMPT
+
+    @classmethod
+    def get_quick_fix_system_prompt(cls) -> str:
+        """Returns the quick-fix-specific system prompt (strict JSON output)."""
+        return cls.QUICK_FIX_SYSTEM_PROMPT
+
+    @classmethod
+    def preprocess_code(cls, code: str) -> str:
+        """Adds line numbers to source code for LLM accuracy."""
+        lines = code.split("\n")
+        numbered_lines = [f"{i + 1} | {line}" for i, line in enumerate(lines)]
+        return "\n".join(numbered_lines)
+
+    @classmethod
+    def build_review_prompt(
+        cls,
+        language: str,
+        review_focus: str,
+        code: str,
+        execution: Optional[ExecutionData] = None,
+    ) -> str:
+        """Constructs token-optimized user prompt for code review."""
+        numbered_code = cls.preprocess_code(code)
+
+        is_failed = execution and (
+            (execution.status and execution.status.lower() in ("failed", "compilation_error", "runtime_error"))
+            or (execution.exit_code is not None and execution.exit_code != 0)
+            or bool(execution.stderr)
+        )
+
+        if is_failed:
+            err_output = execution.stderr or execution.stdout or "(None)"
+            prompt = (
+                f"Task: Provide execution-aware debugging assistance for {language}.\n\n"
+                f"Programming Language:\n{language}\n\n"
+                f"Execution Status:\n{execution.status or 'failed'}\n\n"
+                f"Execution Success:\nNo\n\n"
+                f"Exit Code:\n{execution.exit_code}\n\n"
+                f"Standard Output:\n{execution.stdout or '(None)'}\n\n"
+                f"Compiler Errors:\n{getattr(execution, 'compiler_errors', '') or '(None)'}\n\n"
+                f"Runtime Errors:\n{getattr(execution, 'runtime_errors', '') or err_output}\n\n"
+                f"Standard Error:\n{execution.stderr or '(None)'}\n\n"
+                f"Review Focus:\n{review_focus}\n\n"
+                f"Instructions:\n"
+                f"- Provide execution-aware debugging assistance.\n"
+                f"- Analyze: # Summary, # Detected Runtime Issues, # Probable Cause, # Suggested Fix, # Improved Code, # Strengths, # Issues.\n\n"
+                f"Code ({language}):\n```{language}\n{numbered_code}\n```"
+            )
+        else:
+            prompt = cls.REVIEW_PROMPT_TEMPLATE.replace("{{language}}", language)
+            prompt = prompt.replace("{{review_focus}}", review_focus)
+            prompt = prompt.replace("{{code}}", numbered_code)
+
+            if execution:
+                exec_status = execution.status or "success"
+                exec_success = "Yes" if exec_status == "success" else "No"
+                cmp_err = getattr(execution, "compiler_errors", "") or "(None)"
+                rt_err = getattr(execution, "runtime_errors", "") or (execution.stderr if execution.stderr else "(None)")
+                prompt = prompt.replace("{{execution_status}}", exec_status)
+                prompt = prompt.replace("{{execution_success}}", exec_success)
+                prompt = prompt.replace("{{exit_code}}", str(execution.exit_code if execution.exit_code is not None else 0))
+                prompt = prompt.replace("{{stdout}}", execution.stdout if execution.stdout else "(None)")
+                prompt = prompt.replace("{{compiler_errors}}", cmp_err)
+                prompt = prompt.replace("{{runtime_errors}}", rt_err)
+                prompt = prompt.replace("{{stderr}}", execution.stderr if execution.stderr else "(None)")
+            else:
+                prompt = prompt.replace("{{execution_status}}", "not_executed")
+                prompt = prompt.replace("{{execution_success}}", "Unknown")
+                prompt = prompt.replace("{{exit_code}}", "0")
+                prompt = prompt.replace("{{stdout}}", "(None - Static Analysis)")
+                prompt = prompt.replace("{{compiler_errors}}", "(None)")
+                prompt = prompt.replace("{{runtime_errors}}", "(None)")
+                prompt = prompt.replace("{{stderr}}", "(None - Static Analysis)")
+
+        return prompt
+
+    @classmethod
+    def build_rewrite_prompt(cls, language: str, code: str) -> str:
+        """Constructs token-optimized user prompt for code rewrite."""
+        prompt = cls.REWRITE_PROMPT_TEMPLATE.replace("{{language}}", language)
+        prompt = prompt.replace("{{code}}", code)
+        return prompt
+
+    @classmethod
+    def build_quick_fix_prompt(cls, language: str, code: str, issue: dict) -> str:
+        """Constructs token-optimized user prompt for quick fix."""
+        prompt = cls.QUICK_FIX_PROMPT_TEMPLATE.replace("{{language}}", language)
+        prompt = prompt.replace("{{code}}", code)
+        prompt = prompt.replace("{{issue_title}}", str(issue.get("title", "")))
+        prompt = prompt.replace("{{issue_description}}", str(issue.get("description", "")))
+        prompt = prompt.replace("{{issue_severity}}", str(issue.get("severity", "")))
+        prompt = prompt.replace("{{issue_suggestion}}", str(issue.get("suggestion", "")))
+        prompt = prompt.replace("{{issue_fixSnippet}}", str(issue.get("fixSnippet", "")))
+        prompt = prompt.replace("{{issue_fixType}}", str(issue.get("fixType", "")))
+        prompt = prompt.replace("{{issue_line}}", str(issue.get("line", "")))
+        prompt = prompt.replace("{{issue_endLine}}", str(issue.get("endLine", "")))
+        return prompt
