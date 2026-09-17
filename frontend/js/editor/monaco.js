@@ -102,10 +102,12 @@ const MonacoManager = (() => {
 
             window.require(["vs/editor/editor.main"], () => {
                 try {
+                    const currentTheme = document.body.dataset.theme === "light" ? "vs" : "vs-dark";
+
                     _editor = window.monaco.editor.create(container, {
                         value:                  "",
                         language:               "python",
-                        theme:                  "vs-dark",
+                        theme:                  currentTheme,
 
                         // Layout
                         automaticLayout:        true,

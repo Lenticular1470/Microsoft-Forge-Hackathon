@@ -50,13 +50,64 @@ window.appState = {
         data: null,
         isLoading: false,
     },
+    theme: "dark",
 };
+
+function getStoredTheme() {
+    try {
+        const saved = localStorage.getItem("regenarate-theme");
+        if (saved === "light" || saved === "dark") return saved;
+    } catch (e) {
+        // Ignore storage failures.
+    }
+    return "dark";
+}
+
+function applyTheme(theme) {
+    const effectiveTheme = theme === "light" ? "light" : "dark";
+    document.body.dataset.theme = effectiveTheme;
+    window.appState.theme = effectiveTheme;
+
+    const themeBtn = document.getElementById("theme-toggle");
+    if (themeBtn) {
+        themeBtn.textContent = effectiveTheme === "dark" ? "Dark" : "Light";
+        themeBtn.setAttribute("aria-label", effectiveTheme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+    }
+
+    const hljsLink = document.getElementById("hljs-theme");
+    if (hljsLink) {
+        hljsLink.href = effectiveTheme === "dark"
+            ? "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css"
+            : "https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css";
+    }
+
+    if (window.monaco && window.monaco.editor) {
+        window.monaco.editor.setTheme(effectiveTheme === "dark" ? "vs-dark" : "vs");
+    }
+
+    try {
+        localStorage.setItem("regenarate-theme", effectiveTheme);
+    } catch (e) {
+        // Ignore storage failures.
+    }
+}
 
 /**
  * Initializes all controllers when DOM is ready.
  */
 async function initializeApp() {
     console.info(`[${APP_CONFIG.appName}] v${APP_CONFIG.version} — Initializing...`);
+
+    const savedTheme = getStoredTheme();
+    applyTheme(savedTheme);
+
+    const themeToggle = document.getElementById("theme-toggle");
+    if (themeToggle) {
+        themeToggle.addEventListener("click", () => {
+            const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
+            applyTheme(nextTheme);
+        });
+    }
 
     // 1. Initialize Console Controller (Phase 11)
     const consoleController = new window.ConsoleController();
@@ -92,14 +143,14 @@ async function checkBackendHealth() {
             console.info("[Health Check] Backend is operational:", response.data);
             if (healthBadge) {
                 healthBadge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-                healthBadge.textContent = "● API Online";
+                healthBadge.textContent = "API Online";
             }
         }
     } catch (error) {
         console.warn("[Health Check] Backend offline or unreachable.");
         if (healthBadge) {
             healthBadge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20";
-            healthBadge.textContent = "○ API Offline";
+            healthBadge.textContent = "API Offline";
         }
     }
 }

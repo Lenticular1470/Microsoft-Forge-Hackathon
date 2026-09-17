@@ -45,10 +45,10 @@ class NotificationManager {
         };
 
         const iconMap = {
-            success: "✓",
-            info: "ℹ",
-            warning: "⚠",
-            error: "✖",
+            success: "OK",
+            info: "Info",
+            warning: "Warning",
+            error: "Error",
         };
 
         const styleClasses = colorMap[type] || colorMap.info;
@@ -59,8 +59,8 @@ class NotificationManager {
 
         toast.innerHTML = `
             <div class="flex items-center space-x-3 pr-2">
-                <span class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs bg-white/10 shrink-0">
-                    ${iconSymbol}
+                <span class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] bg-white/10 shrink-0 uppercase">
+                    ${iconSymbol.substring(0, 1)}
                 </span>
                 <span class="text-sm font-medium leading-snug">${message}</span>
             </div>

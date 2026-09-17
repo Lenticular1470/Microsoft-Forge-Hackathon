@@ -40,10 +40,10 @@ const Findings = (() => {
 
     /** Visual labels and badge styles per severity. */
     const SEVERITY_STYLE = {
-        critical: { label: "Critical", badgeClass: "badge-critical", icon: "●" },
-        high:     { label: "High",     badgeClass: "badge-high",     icon: "▲" },
-        medium:   { label: "Medium",   badgeClass: "badge-medium",   icon: "◆" },
-        low:      { label: "Low",      badgeClass: "badge-low",      icon: "ℹ" },
+        critical: { label: "Critical", badgeClass: "badge-critical", icon: "" },
+        high:     { label: "High",     badgeClass: "badge-high",     icon: "" },
+        medium:   { label: "Medium",   badgeClass: "badge-medium",   icon: "" },
+        low:      { label: "Low",      badgeClass: "badge-low",      icon: "" },
     };
 
     // ── Private: HTML Builders ────────────────────────────────────────────────
@@ -89,7 +89,7 @@ const Findings = (() => {
                         ${uuidAttr}
                         title="Explain this fix"
                     >
-                        💬 Explain
+                        Explain
                     </button>
                     <button type="button"
                         class="btn-quick-fix"
@@ -97,7 +97,7 @@ const Findings = (() => {
                         ${uuidAttr}
                         title="Generate and preview Quick Fix"
                     >
-                        ⚡ Quick Fix
+                        Quick Fix
                     </button>
                 </div>
             </div>
@@ -141,7 +141,7 @@ const Findings = (() => {
 
                     ${issue.suggestion ? `
                         <div class="issue-suggestion">
-                            <span class="issue-suggestion-label">💡 Suggestion</span>
+                            <span class="issue-suggestion-label">Suggestion</span>
                             <p>${_esc(issue.suggestion)}</p>
                         </div>
                     ` : ""}
@@ -156,7 +156,7 @@ const Findings = (() => {
                         aria-expanded="false"
                         aria-controls="fix-${issue.id}"
                     >
-                        <span class="show-fix-chevron">▼</span> Show Fix
+                        <span class="show-fix-chevron"></span> Show Fix
                     </button>
                 </div>
 
@@ -239,12 +239,12 @@ const Findings = (() => {
                 if (isExpanded) {
                     fixSection.hidden = true;
                     btn.setAttribute("aria-expanded", "false");
-                    btn.querySelector(".show-fix-chevron").textContent = "▼";
+                    btn.querySelector(".show-fix-chevron").textContent = "";
                     btn.innerHTML = btn.innerHTML.replace("Hide Fix", "Show Fix");
                 } else {
                     fixSection.hidden = false;
                     btn.setAttribute("aria-expanded", "true");
-                    btn.querySelector(".show-fix-chevron").textContent = "▲";
+                    btn.querySelector(".show-fix-chevron").textContent = "";
                     btn.innerHTML = btn.innerHTML.replace("Show Fix", "Hide Fix");
                 }
             });
@@ -391,7 +391,7 @@ const Findings = (() => {
 
         // Show empty-state message if panel is fully resolved
         if (_container && _container.querySelectorAll(".issue-card").length === 0) {
-            _container.innerHTML = `<p class="findings-empty">All issues resolved! ✓ Run Generate Review to verify.</p>`;
+            _container.innerHTML = `<p class="findings-empty">All issues resolved! Run Generate Review to verify.</p>`;
         }
     }
 
@@ -430,12 +430,12 @@ const Findings = (() => {
         if (issue.status === "UNKNOWN_LOCATION") {
             const badge = document.createElement("div");
             badge.className = "location-warning-badge";
-            badge.innerHTML = "⚠ Location uncertain — <span>Generate a new Review to re-locate this issue.</span>";
+            badge.innerHTML = "Location uncertain — <span>Generate a new Review to re-locate this issue.</span>";
             card.appendChild(badge);
         } else if (issue.status === "STALE") {
             const badge = document.createElement("div");
             badge.className = "location-warning-badge location-warning-stale";
-            badge.innerHTML = "⚠ Overlaps with edited region — <span>Generate a new Review for accurate results.</span>";
+            badge.innerHTML = "Overlaps with edited region — <span>Generate a new Review for accurate results.</span>";
             card.appendChild(badge);
         }
     }

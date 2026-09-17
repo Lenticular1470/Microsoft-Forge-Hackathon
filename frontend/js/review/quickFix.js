@@ -101,7 +101,7 @@ const ReviewActions = (() => {
 
         const isHidden = fixSection.hidden;
         fixSection.hidden = !isHidden;
-        btn.innerHTML = isHidden ? "💬 Hide Explanation" : "💬 Explain";
+        btn.innerHTML = isHidden ? "Hide Explanation" : "Explain";
 
         if (window.Findings) window.Findings.setActiveIssue(issueUuid);
         if (window.Editor && window.Editor.navigation) window.Editor.navigation.jumpToIssue(issue);
@@ -159,7 +159,7 @@ const ReviewActions = (() => {
 
         // ── Cache miss: call backend ──────────────────────────────────────────
         const btn          = document.querySelector(`.btn-quick-fix[data-uuid="${issueUuid}"]`);
-        const originalText = btn ? btn.innerHTML : "⚡ Quick Fix";
+        const originalText = btn ? btn.innerHTML : "Quick Fix";
         _setButtonsDisabled(true);
         if (btn) btn.innerHTML = "⏳ Generating...";
         if (_retryBtn) _retryBtn.classList.add("hidden");

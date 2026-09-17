@@ -153,10 +153,10 @@ class ConsoleController {
         if (this.consoleBody) {
             if (this.isCollapsed) {
                 this.consoleBody.classList.add("hidden");
-                if (this.toggleIcon) this.toggleIcon.textContent = "▲";
+                if (this.toggleIcon) this.toggleIcon.textContent = "";
             } else {
                 this.consoleBody.classList.remove("hidden");
-                if (this.toggleIcon) this.toggleIcon.textContent = "▼";
+                if (this.toggleIcon) this.toggleIcon.textContent = "";
             }
         }
     }

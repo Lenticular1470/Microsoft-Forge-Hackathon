@@ -252,32 +252,29 @@ body {
     cursor: pointer;
 }
 
-/* Filled circle — critical error */
+/* Severity indicator strips intentionally left text-only to avoid icon glyphs */
 .issue-glyph-critical::before {
-    content: "●";
+    content: "";
     color: #ef4444;
-    text-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+    text-shadow: none;
 }
 
-/* Upward triangle — high severity warning */
 .issue-glyph-high::before {
-    content: "▲";
+    content: "";
     color: #f97316;
-    text-shadow: 0 0 4px rgba(249, 115, 22, 0.4);
+    text-shadow: none;
 }
 
-/* Diamond — medium severity */
 .issue-glyph-medium::before {
-    content: "◆";
+    content: "";
     color: #eab308;
-    text-shadow: 0 0 4px rgba(234, 179, 8, 0.4);
+    text-shadow: none;
 }
 
-/* Info circle — low severity */
 .issue-glyph-low::before {
-    content: "ℹ";
+    content: "";
     color: #22c55e;
-    text-shadow: 0 0 4px rgba(34, 197, 94, 0.3);
+    text-shadow: none;
 }
 
 /* ==========================================

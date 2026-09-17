@@ -43,12 +43,12 @@ class Renderer {
 
         if (typeof window.marked !== "undefined" && window.marked.parse) {
             htmlContent = window.marked.parse(markdownText);
-            // Enhance headers with icons and alert styling for Phase 13 debugging
+            // Enhance headers for readability without emoji decorations.
             htmlContent = htmlContent
-                .replace(/<h1>Detected Runtime Issues<\/h1>/gi, '<h1 class="text-rose-400 font-bold border-l-4 border-rose-500 pl-3 py-1 bg-rose-500/10 rounded-r-md">🚨 Detected Runtime Issues</h1>')
-                .replace(/<h1>Probable Cause<\/h1>/gi, '<h1 class="text-amber-400 font-bold border-l-4 border-amber-500 pl-3 py-1 bg-amber-500/10 rounded-r-md">🔍 Probable Cause</h1>')
-                .replace(/<h1>Suggested Fix<\/h1>/gi, '<h1 class="text-emerald-400 font-bold border-l-4 border-emerald-500 pl-3 py-1 bg-emerald-500/10 rounded-r-md">💡 Suggested Fix</h1>')
-                .replace(/<h1>Improved Code<\/h1>/gi, '<h1 class="text-primary-300 font-bold border-l-4 border-primary-500 pl-3 py-1 bg-primary-500/10 rounded-r-md">✨ Improved Code</h1>');
+                .replace(/<h1>Detected Runtime Issues<\/h1>/gi, '<h1 class="text-rose-400 font-bold border-l-4 border-rose-500 pl-3 py-1 bg-rose-500/10 rounded-r-md">Detected Runtime Issues</h1>')
+                .replace(/<h1>Probable Cause<\/h1>/gi, '<h1 class="text-amber-400 font-bold border-l-4 border-amber-500 pl-3 py-1 bg-amber-500/10 rounded-r-md">Probable Cause</h1>')
+                .replace(/<h1>Suggested Fix<\/h1>/gi, '<h1 class="text-emerald-400 font-bold border-l-4 border-emerald-500 pl-3 py-1 bg-emerald-500/10 rounded-r-md">Suggested Fix</h1>')
+                .replace(/<h1>Improved Code<\/h1>/gi, '<h1 class="text-primary-300 font-bold border-l-4 border-primary-500 pl-3 py-1 bg-primary-500/10 rounded-r-md">Improved Code</h1>');
         } else {
             const div = document.createElement("div");
             div.textContent = markdownText;
@@ -178,14 +178,14 @@ class Renderer {
 
         const readableParagraph = `
             <div class="review-summary-block">
-                <h4 class="review-section-title">📝 Review</h4>
+                <h4 class="review-section-title">Review</h4>
                 <p class="review-summary-text">${Renderer._esc(summaryText)} ${Renderer._esc(strengthsText)} ${Renderer._esc(recommendationsText)}</p>
             </div>
         `;
 
         const strengthsHtml = (data.strengths && data.strengths.length > 0) ? `
             <div class="review-strengths-block">
-                <h4 class="review-section-title">✅ Strengths</h4>
+                <h4 class="review-section-title">Strengths</h4>
                 <ul class="review-list">
                     ${data.strengths.map((s) => `<li>${Renderer._esc(s)}</li>`).join("")}
                 </ul>
@@ -194,7 +194,7 @@ class Renderer {
 
         const recommendationsHtml = (data.recommendations && data.recommendations.length > 0) ? `
             <div class="review-recommendations-block">
-                <h4 class="review-section-title">🔧 Recommendations</h4>
+                <h4 class="review-section-title">Recommendations</h4>
                 <ul class="review-list">
                     ${data.recommendations.map((r) => `<li>${Renderer._esc(r)}</li>`).join("")}
                 </ul>
@@ -212,7 +212,7 @@ class Renderer {
                 ${strengthsHtml}
 
                 <div class="review-findings-section">
-                    <h4 class="review-section-title">🔍 Findings</h4>
+                    <h4 class="review-section-title">Findings</h4>
                     <div id="findings-container">
                         <!-- Findings.render() populates this -->
                     </div>
@@ -269,7 +269,7 @@ class Renderer {
                 <div class="relative group">
                     <button type="button" id="copy-rewrite-btn"
                         class="absolute top-3 right-3 z-10 px-3 py-1.5 bg-surface-800/90 hover:bg-surface-700 text-xs text-white rounded-md border border-surface-700 flex items-center space-x-1 backdrop-blur-sm transition-colors shadow-md">
-                        <span>📋 Copy Code</span>
+                        <span>Copy Code</span>
                     </button>
                     <pre class="bg-surface-950 p-4 rounded-lg overflow-x-auto text-sm font-mono border border-surface-800 text-primary-200"><code class="language-${language}">${escapedDiv.innerHTML}</code></pre>
                 </div>

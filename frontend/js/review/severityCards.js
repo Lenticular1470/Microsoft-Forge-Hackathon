@@ -31,7 +31,7 @@ const SeverityCards = (() => {
         {
             key:         "critical",
             label:       "Critical",
-            icon:        "●",          // CSS glyph — same as glyph margin icon
+            icon:        "",
             iconClass:   "sev-icon-critical",
             borderColor: "#ef4444",
             textColor:   "#fca5a5",
@@ -40,7 +40,7 @@ const SeverityCards = (() => {
         {
             key:         "high",
             label:       "High",
-            icon:        "▲",
+            icon:        "",
             iconClass:   "sev-icon-high",
             borderColor: "#f97316",
             textColor:   "#fdba74",
@@ -49,7 +49,7 @@ const SeverityCards = (() => {
         {
             key:         "medium",
             label:       "Medium",
-            icon:        "◆",
+            icon:        "",
             iconClass:   "sev-icon-medium",
             borderColor: "#eab308",
             textColor:   "#fde047",
@@ -58,7 +58,7 @@ const SeverityCards = (() => {
         {
             key:         "low",
             label:       "Low",
-            icon:        "ℹ",
+            icon:        "",
             iconClass:   "sev-icon-low",
             borderColor: "#22c55e",
             textColor:   "#86efac",

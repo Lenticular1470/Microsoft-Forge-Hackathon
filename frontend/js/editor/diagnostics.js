@@ -123,11 +123,11 @@ const DiagnosticsManager = (() => {
         ];
 
         if (issue.suggestion) {
-            parts.push("", `💡 **Suggestion:** ${_escapeMarkdown(issue.suggestion)}`);
+            parts.push("", `**Suggestion:** ${_escapeMarkdown(issue.suggestion)}`);
         }
 
         if (issue.category) {
-            parts.push("", `📂 *Category: ${_escapeMarkdown(issue.category)}*`);
+            parts.push("", `*Category: ${_escapeMarkdown(issue.category)}*`);
         }
 
         return parts.join("\n");
