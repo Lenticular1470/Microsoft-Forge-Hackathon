@@ -105,22 +105,30 @@ class ReviewController {
                     }
                 }
 
-                if (data.issues !== undefined) {
-                    // ── STRUCTURED PATH (new IDE experience) ──────────────────
-                    // Store in ReviewState (single source of truth).
-                    window.ReviewState.set(data);
+                const isStructuredResponse = data && typeof data === "object" && (
+                    Array.isArray(data.issues) ||
+                    Array.isArray(data.strengths) ||
+                    Array.isArray(data.recommendations) ||
+                    typeof data.summary === "string"
+                );
 
-                    // Apply Monaco diagnostics (markers + decorations + glyphs).
+                if (data.issues !== undefined || isStructuredResponse) {
+                    const normalizedData = data.issues !== undefined ? data : {
+                        ...data,
+                        issues: Array.isArray(data.issues) ? data.issues : [],
+                    };
+
+                    // ── STRUCTURED PATH (new IDE experience) ──────────────────
+                    window.ReviewState.set(normalizedData);
+
                     if (window.Editor && window.Editor.diagnostics) {
                         window.Editor.diagnostics.setDiagnostics(
                             window.ReviewState.getDiagnosticIssues()
                         );
                     }
 
-                    // Render structured review panel.
-                    window.Renderer?.renderStructuredReview(data);
+                    window.Renderer?.renderStructuredReview(normalizedData);
 
-                    // Enable bidirectional cursor sync.
                     if (window.Editor && window.Editor.navigation) {
                         window.Editor.navigation.setupCursorSync();
                     }
@@ -134,8 +142,8 @@ class ReviewController {
                     }
 
                 } else {
-                    // ── LEGACY MARKDOWN PATH (unchanged) ──────────────────────
-                    window.Renderer?.renderReviewResult(data.review);
+                    const reviewText = typeof data.review === "string" ? data.review : JSON.stringify(data, null, 2);
+                    window.Renderer?.renderReviewResult(reviewText);
                     if (window.notifications) {
                         window.notifications.success("Code review generated successfully!");
                     }

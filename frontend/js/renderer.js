@@ -90,31 +90,58 @@ class Renderer {
         const copyReviewBtn = document.getElementById("copy-review-btn");
         const downloadReviewBtn = document.getElementById("download-review-btn");
 
+        let reviewText = reviewMarkdown;
+        let readableSummary = "Your code was reviewed successfully.";
+
+        if (reviewMarkdown && typeof reviewMarkdown === "object") {
+            const summary = reviewMarkdown.summary || "Your code was reviewed successfully.";
+            const strengths = Array.isArray(reviewMarkdown.strengths)
+                ? reviewMarkdown.strengths.map((item) => String(item).replace(/^[\-\*\d.\s]+/, "")).join(" ")
+                : "";
+            const recommendations = Array.isArray(reviewMarkdown.recommendations)
+                ? reviewMarkdown.recommendations.map((item) => String(item).replace(/^[\-\*\d.\s]+/, "")).join(" ")
+                : "";
+            readableSummary = `${summary} ${strengths} ${recommendations}`.trim();
+            reviewText = readableSummary;
+        }
+
+        if (typeof reviewText === "string" && reviewText.trim().startsWith("{") && reviewText.trim().endsWith("}")) {
+            try {
+                const parsed = JSON.parse(reviewText);
+                if (parsed && typeof parsed === "object") {
+                    const summary = parsed.summary || "Your code was reviewed successfully.";
+                    const strengths = Array.isArray(parsed.strengths)
+                        ? parsed.strengths.map((item) => String(item).replace(/^[\-\*\d.\s]+/, "")).join(" ")
+                        : "";
+                    const recommendations = Array.isArray(parsed.recommendations)
+                        ? parsed.recommendations.map((item) => String(item).replace(/^[\-\*\d.\s]+/, "")).join(" ")
+                        : "";
+                    reviewText = `${summary} ${strengths} ${recommendations}`.trim();
+                }
+            } catch (e) {
+                // Leave the raw text as-is if it is not valid JSON.
+            }
+        }
+
         if (reviewContainer) {
             reviewContainer.innerHTML = `
                 <div class="prose prose-invert max-w-none text-surface-200 text-sm leading-relaxed space-y-4">
-                    ${Renderer.renderMarkdown(reviewMarkdown)}
+                    <p class="whitespace-pre-wrap leading-7">${Renderer._esc(reviewText)}</p>
                 </div>
             `;
-
-            if (typeof window.hljs !== "undefined") {
-                reviewContainer.querySelectorAll("pre code").forEach((block) => {
-                    window.hljs.highlightElement(block);
-                });
-            }
         }
 
         if (copyReviewBtn) {
             copyReviewBtn.onclick = () => {
                 if (window.ClipboardManager) {
-                    window.ClipboardManager.copy(reviewMarkdown, "Code Review");
+                    window.ClipboardManager.copy(reviewText, "Code Review");
                 }
             };
         }
 
         if (downloadReviewBtn) {
             downloadReviewBtn.onclick = () => {
-                Renderer.downloadFile("code_review_findings.md", reviewMarkdown, "text/markdown");
+                Renderer.downloadFile("code_review_findings.md", reviewText, "text/markdown");
                 if (window.notifications) {
                     window.notifications.success("Downloaded 'code_review_findings.md'");
                 }
@@ -144,14 +171,17 @@ class Renderer {
 
         if (!reviewContainer) return;
 
-        // ── Build HTML sections ──────────────────────────────────────────────
+        const cleanText = (arr) => (Array.isArray(arr) ? arr.map((item) => String(item).replace(/^[\-\*\d.\s]+/, "")).join(" ") : "");
+        const summaryText = data.summary ? String(data.summary) : "Your code was reviewed successfully.";
+        const strengthsText = cleanText(data.strengths) || "The code is clear and easy to follow.";
+        const recommendationsText = cleanText(data.recommendations) || "A few small refinements could improve readability and maintainability.";
 
-        const summaryHtml = data.summary ? `
+        const readableParagraph = `
             <div class="review-summary-block">
-                <h4 class="review-section-title">📝 Summary</h4>
-                <p class="review-summary-text">${Renderer._esc(data.summary)}</p>
+                <h4 class="review-section-title">📝 Review</h4>
+                <p class="review-summary-text">${Renderer._esc(summaryText)} ${Renderer._esc(strengthsText)} ${Renderer._esc(recommendationsText)}</p>
             </div>
-        ` : "";
+        `;
 
         const strengthsHtml = (data.strengths && data.strengths.length > 0) ? `
             <div class="review-strengths-block">
@@ -171,11 +201,9 @@ class Renderer {
             </div>
         ` : "";
 
-        // ── Assemble main layout ─────────────────────────────────────────────
-
         reviewContainer.innerHTML = `
             <div class="structured-review">
-                ${summaryHtml}
+                ${readableParagraph}
 
                 <div id="severity-dashboard-container" class="review-severity-dashboard">
                     <!-- SeverityCards.render() populates this -->
@@ -194,8 +222,6 @@ class Renderer {
             </div>
         `;
 
-        // ── Delegate to sub-modules ──────────────────────────────────────────
-
         if (window.SeverityCards) {
             const dashboardContainer = document.getElementById("severity-dashboard-container");
             const counts = window.ReviewState ? window.ReviewState.getSeverityCounts() : data.severity;
@@ -208,7 +234,6 @@ class Renderer {
             window.Findings.render(findingsContainer, issues);
         }
 
-        // ── Copy button wires to markdown fallback or full data ──────────────
         if (copyReviewBtn) {
             const copyText = data.markdown || data.review || JSON.stringify(data, null, 2);
             copyReviewBtn.onclick = () => {

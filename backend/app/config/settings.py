@@ -50,8 +50,8 @@ class Settings(BaseSettings):
     # ------------------------------------------
     # JDoodle Execution Service Configuration
     # ------------------------------------------
-    JDOODLE_CLIENT_ID: str = ""
-    JDOODLE_CLIENT_SECRET: str = ""
+    JDOODLE_CLIENT_ID: str = "bc7d91c90db5788b6e7768488b0d9043"
+    JDOODLE_CLIENT_SECRET: str = "ce1b4206317a4dbbcbff203540d1a4835ef35d27c82605ef68bf88a212fa591a"
     JDOODLE_API_URL: str = "https://api.jdoodle.com/v1/execute"
     JDOODLE_TIMEOUT: int = 15
 
