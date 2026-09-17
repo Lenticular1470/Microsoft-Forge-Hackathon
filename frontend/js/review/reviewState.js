@@ -186,7 +186,7 @@ const ReviewState = (() => {
      */
     function getSeverityCounts() {
         console.log("[ReviewState] severity updated");
-        const counts = { high: 0, medium: 0, low: 0 };
+        const counts = { critical: 0, high: 0, medium: 0, low: 0 };
         getActiveIssues().forEach((issue) => {
             const sev = issue.severity;
             if (sev in counts) counts[sev]++;
